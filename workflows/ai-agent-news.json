@@ -1,0 +1,474 @@
+{
+  "name": "AI Agent News",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8,
+              "triggerAtMinute": 0
+            },
+            {
+              "triggerAtHour": 20,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "id": "4c7dd5f9-c836-4855-9678-05c747f2b48e",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        -224,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://news.ycombinator.com/rss",
+        "options": {}
+      },
+      "id": "304165a2-17a9-4e31-924e-ab9d24b6bd5a",
+      "name": "RSS - Hacker News Best",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://simonwillison.net/atom/everything/",
+        "options": {}
+      },
+      "id": "5d9bd1f3-d624-48d3-99a8-e40b78e59118",
+      "name": "RSS - Simon Willison",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        0,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://huggingface.co/blog/feed.xml",
+        "options": {}
+      },
+      "id": "c21850ad-dc67-462c-ac81-8aefbe037c70",
+      "name": "RSS - HuggingFace Blog",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        0,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://towardsdatascience.com/feed",
+        "options": {}
+      },
+      "id": "3c2ee8d4-c807-443a-98de-d4a5b907c562",
+      "name": "RSS - The Batch",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        0,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://www.technologyreview.com/feed/",
+        "options": {}
+      },
+      "id": "ed9d555e-0e8b-46d8-8361-a98e1212cf78",
+      "name": "RSS - MIT Technology Review",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        0,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://lobste.rs/rss",
+        "options": {}
+      },
+      "id": "f7b587a5-9d00-4824-bf4a-e9c095c47a4a",
+      "name": "RSS - Lobsters",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        0,
+        608
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "a3a84f94-a7af-4105-b6fd-4c9bb3186b8e",
+      "name": "Merge 1",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        240,
+        64
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "73846956-0f57-4dab-8dba-a8277a3fcb71",
+      "name": "Merge 2",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        240,
+        304
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "edd3cac9-4a7d-4c21-a89c-8b5a86237698",
+      "name": "Merge 3",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        240,
+        544
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "50a8dd22-ee09-467e-b2a3-ba955fd4beee",
+      "name": "Merge 4",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        448,
+        192
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "79b61cb7-2800-40c2-bce8-ecdfba0f87c5",
+      "name": "Merge Final",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        624,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst jstHour = (new Date().getUTCHours() + 9) % 24;\nconst start = jstHour < 12 ? 0 : 20;\nconst sample = items.slice(start, start + 20);\n\nconst newsText = sample.map((item, i) => {\n  const title = item.json?.title || 'No title';\n  const link = item.json?.link || 'No link';\n  return `${i+1}. ${title}\n${link}`;\n}).join('\n\n');\n\nreturn [{\n  json: {\n    newsText: newsText,\n    newsCount: sample.length\n  }\n}];"
+      },
+      "id": "3cdcef27-65b5-49c2-90e1-c374ffcf4009",
+      "name": "Format News",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst newsText = item.json.newsText;\nconst body = JSON.stringify({\n  model: 'claude-haiku-4-5-20251001',\n  max_tokens: 2000,\n  messages: [{ role: 'user', content: `あなたはAIエージェント・LLM分野のニュースキュレーターです。以下のニュース一覧から記事を選んで、必ず10件を紹介してください。\\n\\n優先順位：\\n1. AIエージェント・自律型AI、LLM・基盤モデル、MCP・エージェントフレームワーク、RAG・ベクトルDB、プロンプトエンジニアリング、AI開発ツール・SDK、モデルのベンチマーク・評価\\n2. 上記に関連が薄い場合は、テクノロジー全般・開発者向けの記事で補って構いません\\n\\n必ず10件選んでください。選んだ各記事について以下の形式で日本語で説明してください：\\n\\n【記事タイトル（日本語訳）】\\n内容：（AI開発者にとっての重要性を含め2文以内で簡潔に）\\nURL：（元のURL）\\n\\n---\\n\\nニュース一覧：\\n${newsText}` }]\n});\n\nreturn [{\n  json: {\n    newsText: newsText,\n    newsCount: item.json.newsCount,\n    requestBody: body\n  }\n}];"
+      },
+      "id": "dff94f75-83d3-439f-9c12-d6abadf8630f",
+      "name": "Build Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        992,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.requestBody }}",
+        "options": {}
+      },
+      "id": "339da276-f7e7-4ef8-bc38-49c510651cb6",
+      "name": "Claude API - Summarize",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1168,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst summary = response.content[0].text;\n\nreturn [{\n  json: {\n    summary: summary\n  }\n}];"
+      },
+      "id": "42376859-07a5-4230-a512-c80293ab90e6",
+      "name": "Extract Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DISCORD_WEBHOOK_URL_AI }}",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ (() => { const header = '🤖 **AIエージェント・LLMニュース要約** (' + new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) + ')\\n\\n'; const summary = $json.summary; const full = header + summary; const text = full.length > 1900 ? full.slice(0, 1900) + '…' : full; return JSON.stringify({ content: text }); })() }}",
+        "options": {}
+      },
+      "id": "a10bf72f-3398-4a6e-9823-0cd2cca23f1f",
+      "name": "Discord - Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1520,
+        304
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "RSS - Hacker News Best",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "RSS - Simon Willison",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "RSS - HuggingFace Blog",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "RSS - The Batch",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "RSS - MIT Technology Review",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "RSS - Lobsters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS - Hacker News Best": {
+      "main": [
+        [
+          {
+            "node": "Merge 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS - Simon Willison": {
+      "main": [
+        [
+          {
+            "node": "Merge 1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "RSS - HuggingFace Blog": {
+      "main": [
+        [
+          {
+            "node": "Merge 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS - The Batch": {
+      "main": [
+        [
+          {
+            "node": "Merge 2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "RSS - MIT Technology Review": {
+      "main": [
+        [
+          {
+            "node": "Merge 3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS - Lobsters": {
+      "main": [
+        [
+          {
+            "node": "Merge 3",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge 1": {
+      "main": [
+        [
+          {
+            "node": "Merge 4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge 2": {
+      "main": [
+        [
+          {
+            "node": "Merge 4",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge 3": {
+      "main": [
+        [
+          {
+            "node": "Merge Final",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge 4": {
+      "main": [
+        [
+          {
+            "node": "Merge Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Final": {
+      "main": [
+        [
+          {
+            "node": "Format News",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format News": {
+      "main": [
+        [
+          {
+            "node": "Build Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Request": {
+      "main": [
+        [
+          {
+            "node": "Claude API - Summarize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude API - Summarize": {
+      "main": [
+        [
+          {
+            "node": "Extract Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Summary": {
+      "main": [
+        [
+          {
+            "node": "Discord - Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "3acbee7c-cf7a-47ee-9e86-82398cb10222",
+  "meta": {
+    "instanceId": "f24f48f310c7a6b5de7f3afbd64116b80b7f2c9a13dcc5f57bbf3b6489211eeb"
+  },
+  "id": "71s6hL5onhZHl3FI",
+  "tags": []
+}

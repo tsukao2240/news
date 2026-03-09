@@ -1,0 +1,524 @@
+{
+  "name": "Tech News Summarizer",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8
+            },
+            {
+              "triggerAtHour": 20
+            }
+          ]
+        }
+      },
+      "id": "61c788d8-9324-4c05-92f2-01f9052df3c1",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        -224,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://news.ycombinator.com/rss",
+        "options": {}
+      },
+      "id": "a73753ee-c6a6-4609-a5ef-b528506b913d",
+      "name": "RSS - Hacker News Best",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://b.hatena.ne.jp/hotentry/it.rss",
+        "options": {}
+      },
+      "id": "d0e8a616-ba00-423b-84f7-d7d2c1581e5c",
+      "name": "RSS - はてなブックマーク",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        0,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://techcrunch.com/feed/",
+        "options": {}
+      },
+      "id": "93f76d2c-92e0-421e-b169-5279a6c9ade8",
+      "name": "RSS - TechCrunch",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        0,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://www.theverge.com/rss/index.xml",
+        "options": {}
+      },
+      "id": "4114f7fd-8c8f-473a-96c9-aa4ed18aa197",
+      "name": "RSS - The Verge",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        0,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://lobste.rs/rss",
+        "options": {}
+      },
+      "id": "96ab78de-ddd9-4720-ba00-43a9605a37be",
+      "name": "RSS - Lobsters",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        0,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://thenewstack.io/feed/",
+        "options": {}
+      },
+      "id": "5c6c11d2-f814-476a-9efe-be38c51f339c",
+      "name": "RSS - The New Stack",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        0,
+        608
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://www.publickey1.jp/atom.xml",
+        "options": {}
+      },
+      "id": "27e0380e-192b-4ad3-9c98-e8fde4f176a6",
+      "name": "RSS - Publickey",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        0,
+        720
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "1c2bd602-d937-40aa-9441-070c480da01a",
+      "name": "Merge 1",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        240,
+        64
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "d410ffdd-4ae8-4cf5-897c-698747fb6d9c",
+      "name": "Merge 2",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        240,
+        304
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "700d6330-87ec-4998-aaa3-8dfe1a2c7154",
+      "name": "Merge 3",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        240,
+        544
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "75745a88-2785-4476-af41-fd992df3411d",
+      "name": "Merge 4",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        448,
+        192
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "b4ba54ea-5973-4155-9610-d641725ec76a",
+      "name": "Merge 5",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        448,
+        432
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "cceb480c-6ec2-475a-8e8e-8fa9081f1510",
+      "name": "Merge Final",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        624,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst jstHour = (new Date().getUTCHours() + 9) % 24;\nconst start = jstHour < 12 ? 0 : 20;\nconst sample = items.slice(start, start + 20);\n\nconst newsText = sample.map((item, i) => {\n  const title = item.json?.title || 'No title';\n  const link = item.json?.link || 'No link';\n  return `${i+1}. ${title}\n${link}`;\n}).join('\n\n');\n\nreturn [{\n  json: {\n    newsText: newsText,\n    newsCount: sample.length\n  }\n}];"
+      },
+      "id": "4f2978ec-de33-4344-b33f-0a74ccb9495f",
+      "name": "Format News",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst newsText = item.json.newsText;\nconst body = JSON.stringify({\n  model: 'claude-haiku-4-5-20251001',\n  max_tokens: 2000,\n  messages: [{ role: 'user', content: `あなたはバックエンドエンジニア向けのニュースキュレーターです。以下のニュース一覧から、バックエンドエンジニアにとって特に重要・興味深い記事を10件選んでください。\\n\\n優先する分野：サーバーサイド技術・フレームワーク、データベース・クエリ最適化、API設計・マイクロサービス、クラウドインフラ・Kubernetes・Docker、パフォーマンスチューニング、セキュリティ、プログラミング言語（Go・Rust・Python・Java等）、開発ツール・CI/CD\\n\\n選んだ各記事について以下の形式で日本語で説明してください：\\n\\n【記事タイトル（日本語訳）】\\n内容：（バックエンドエンジニアにとっての重要性を含め2文以内で簡潔に）\\nURL：（元のURL）\\n\\n---\\n\\nニュース一覧：\\n${newsText}` }]\n});\n\nreturn [{\n  json: {\n    newsText: newsText,\n    newsCount: item.json.newsCount,\n    requestBody: body\n  }\n}];"
+      },
+      "id": "397e798d-424a-4525-8a50-4c639929e9ef",
+      "name": "Build Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        992,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.requestBody }}",
+        "options": {}
+      },
+      "id": "952427af-fb14-48fc-a51b-fcfd2894338e",
+      "name": "Claude API - Summarize",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1168,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst summary = response.content[0].text;\n\nreturn [{\n  json: {\n    summary: summary\n  }\n}];"
+      },
+      "id": "3661b3c5-a6a0-40dc-8f8f-884915cc5d1d",
+      "name": "Extract Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DISCORD_WEBHOOK_URL }}",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ (() => { const header = '📰 **テクノロジーニュース要約** (' + new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) + ')\\n\\n'; const summary = $json.summary; const full = header + summary; const text = full.length > 1900 ? full.slice(0, 1900) + '…' : full; return JSON.stringify({ content: text }); })() }}",
+        "options": {}
+      },
+      "id": "98e898be-414a-4c1d-8785-c17e7fddbff7",
+      "name": "Discord - Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1520,
+        304
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "RSS - Hacker News Best",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "RSS - はてなブックマーク",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "RSS - TechCrunch",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "RSS - The Verge",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "RSS - Lobsters",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "RSS - The New Stack",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "RSS - Publickey",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS - Hacker News Best": {
+      "main": [
+        [
+          {
+            "node": "Merge 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS - はてなブックマーク": {
+      "main": [
+        [
+          {
+            "node": "Merge 1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "RSS - TechCrunch": {
+      "main": [
+        [
+          {
+            "node": "Merge 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS - The Verge": {
+      "main": [
+        [
+          {
+            "node": "Merge 2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "RSS - Lobsters": {
+      "main": [
+        [
+          {
+            "node": "Merge 3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS - The New Stack": {
+      "main": [
+        [
+          {
+            "node": "Merge 3",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "RSS - Publickey": {
+      "main": [
+        [
+          {
+            "node": "Merge 5",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge 1": {
+      "main": [
+        [
+          {
+            "node": "Merge 4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge 2": {
+      "main": [
+        [
+          {
+            "node": "Merge 4",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge 3": {
+      "main": [
+        [
+          {
+            "node": "Merge 5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge 4": {
+      "main": [
+        [
+          {
+            "node": "Merge Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge 5": {
+      "main": [
+        [
+          {
+            "node": "Merge Final",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Final": {
+      "main": [
+        [
+          {
+            "node": "Format News",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format News": {
+      "main": [
+        [
+          {
+            "node": "Build Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Request": {
+      "main": [
+        [
+          {
+            "node": "Claude API - Summarize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude API - Summarize": {
+      "main": [
+        [
+          {
+            "node": "Extract Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Summary": {
+      "main": [
+        [
+          {
+            "node": "Discord - Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "20de09c7-a4eb-47f3-8e1e-55a13301003a",
+  "meta": {
+    "instanceId": "f24f48f310c7a6b5de7f3afbd64116b80b7f2c9a13dcc5f57bbf3b6489211eeb"
+  },
+  "id": "kHKcj4LiRiyfeePN",
+  "tags": []
+}
