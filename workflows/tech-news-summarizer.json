@@ -6,10 +6,12 @@
         "rule": {
           "interval": [
             {
-              "triggerAtHour": 8
+              "triggerAtHour": 8,
+              "triggerAtMinute": 0
             },
             {
-              "triggerAtHour": 20
+              "triggerAtHour": 20,
+              "triggerAtMinute": 0
             }
           ]
         }
