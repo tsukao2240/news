@@ -166,7 +166,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\nconst jstHour = (new Date().getUTCHours() + 9) % 24;\nconst start = jstHour < 12 ? 0 : 20;\nconst sample = items.slice(start, start + 20);\n\nconst newsText = sample.map((item, i) => {\n  const title = item.json?.title || 'No title';\n  const link = item.json?.link || 'No link';\n  return `${i+1}. ${title}\n${link}`;\n}).join('\n\n');\n\nreturn [{\n  json: {\n    newsText: newsText,\n    newsCount: sample.length\n  }\n}];"
+        "jsCode": "const items = $input.all();\nconst jstHour = (new Date().getUTCHours() + 9) % 24;\nconst start = jstHour < 12 ? 0 : 20;\nconst sample = items.slice(start, start + 20);\n\nconst newsText = sample.map((item, i) => {\n  const title = item.json?.title || 'No title';\n  const link = item.json?.link || 'No link';\n  return `${i+1}. ${title}\n${link}`;\n}).join('\\n\\n');\n\nreturn [{\n  json: {\n    newsText: newsText,\n    newsCount: sample.length\n  }\n}];"
       },
       "id": "3cdcef27-65b5-49c2-90e1-c374ffcf4009",
       "name": "Format News",
