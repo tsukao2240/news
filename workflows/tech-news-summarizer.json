@@ -191,7 +191,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\n\n// 投稿済みURLを静的データから取得\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.postedUrls) {\n  staticData.postedUrls = [];\n}\n\n// 古いエントリを削除（7日以上前のものは忘れる）\nconst sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;\nstaticData.postedEntries = (staticData.postedEntries || []).filter(e => e.ts > sevenDaysAgo);\nconst seenUrls = new Set(staticData.postedEntries.map(e => e.url));\n\n// 未投稿の記事をフィルタリング\nconst unseen = items.filter(item => {\n  const link = item.json?.link || '';\n  return link && !seenUrls.has(link);\n});\n\n// 最大20件選択\nconst sample = unseen.slice(0, 20);\n\n// 選択した記事のURLを記録\nconst now = Date.now();\nsample.forEach(item => {\n  const link = item.json?.link || '';\n  if (link) staticData.postedEntries.push({ url: link, ts: now });\n});\n\nconst newsText = sample.map((item, i) => {\n  const title = item.json?.title || 'No title';\n  const link = item.json?.link || 'No link';\n  return `${i+1}. ${title}\\n${link}`;\n}).join('\\n\\n');\n\nreturn [{\n  json: {\n    newsText: newsText,\n    newsCount: sample.length\n  }\n}];"
+        "jsCode": "const items = $input.all();\n\n// 投稿済みURLを静的データから取得\nconst staticData = $getWorkflowStaticData('global');\n\n// 古いエントリを削除（7日以上前のものは忘れる）\nconst sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;\nstaticData.postedEntries = (staticData.postedEntries || []).filter(e => e.ts > sevenDaysAgo);\nconst seenUrls = new Set(staticData.postedEntries.map(e => e.url));\n\n// 未投稿の記事をフィルタリング\nconst unseen = items.filter(item => {\n  const link = item.json?.link || '';\n  return link && !seenUrls.has(link);\n});\n\n// pubDateの降順ソート（新しい記事を優先）\nunseen.sort((a, b) => {\n  const dateA = new Date(a.json?.pubDate || 0).getTime();\n  const dateB = new Date(b.json?.pubDate || 0).getTime();\n  return dateB - dateA;\n});\n\n// 最大20件選択\nconst sample = unseen.slice(0, 20);\n\n// 選択した記事のURLを記録\nconst now = Date.now();\nsample.forEach(item => {\n  const link = item.json?.link || '';\n  if (link) staticData.postedEntries.push({ url: link, ts: now });\n});\n\nconst newsText = sample.map((item, i) => {\n  const title = item.json?.title || 'No title';\n  const link = item.json?.link || 'No link';\n  return `${i+1}. ${title}\\n${link}`;\n}).join('\\n\\n');\n\nreturn [{\n  json: {\n    newsText: newsText,\n    newsCount: sample.length,\n    shouldSkip: sample.length === 0\n  }\n}];"
       },
       "id": "4f2978ec-de33-4344-b33f-0a74ccb9495f",
       "name": "Format News",
@@ -204,6 +204,38 @@
     },
     {
       "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "a1b2c3d4-e5f6-a7b8-c9d0-e1f2a3b4c5d6",
+              "leftValue": "={{ $json.shouldSkip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c1d2e3f4-a5b6-c7d8-e9f0-a1b2c3d4e5f6",
+      "name": "IF - Has New Articles",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        992,
+        304
+      ]
+    },
+    {
+      "parameters": {
         "jsCode": "const item = $input.first();\nconst newsText = item.json.newsText;\nconst body = JSON.stringify({\n  model: 'claude-haiku-4-5-20251001',\n  max_tokens: 2000,\n  messages: [{ role: 'user', content: `あなたはバックエンドエンジニア向けのニュースキュレーターです。以下のニュース一覧から、バックエンドエンジニアにとって特に重要・興味深い記事を10件選んでください。\\n\\n優先する分野：サーバーサイド技術・フレームワーク、データベース・クエリ最適化、API設計・マイクロサービス、クラウドインフラ・Kubernetes・Docker、パフォーマンスチューニング、セキュリティ、プログラミング言語（Go・Rust・Python・Java等）、開発ツール・CI/CD\\n\\n選んだ各記事について以下の形式で日本語で説明してください：\\n\\n【記事タイトル（日本語訳）】\\n内容：（バックエンドエンジニアにとっての重要性を含め2文以内で簡潔に）\\nURL：（元のURL）\\n\\n---\\n\\nニュース一覧：\\n${newsText}` }]\n});\n\nreturn [{\n  json: {\n    newsText: newsText,\n    newsCount: item.json.newsCount,\n    requestBody: body\n  }\n}];"
       },
       "id": "397e798d-424a-4525-8a50-4c639929e9ef",
@@ -211,7 +243,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        992,
+        1184,
         304
       ]
     },
@@ -243,20 +275,20 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1168,
+        1360,
         304
       ]
     },
     {
       "parameters": {
-        "jsCode": "const response = $input.first().json;\nconst summary = response.content[0].text;\n\nreturn [{\n  json: {\n    summary: summary\n  }\n}];"
+        "jsCode": "const response = $input.first().json;\nconst summary = response.content?.[0]?.text ?? '';\n\nreturn [{\n  json: {\n    summary: summary\n  }\n}];"
       },
       "id": "3661b3c5-a6a0-40dc-8f8f-884915cc5d1d",
       "name": "Extract Summary",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1344,
+        1536,
         304
       ]
     },
@@ -267,7 +299,7 @@
         "sendBody": true,
         "contentType": "raw",
         "rawContentType": "application/json",
-        "body": "={{ (() => { const header = '📰 **テクノロジーニュース要約** (' + new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) + ')\\n\\n'; const summary = $json.summary; const full = header + summary; const text = full.length > 1900 ? full.slice(0, 1900) + '…' : full; return JSON.stringify({ content: text }); })() }}",
+        "body": "={{ (() => { const header = '📰 **テクノロジーニュース要約** (' + new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) + ')\\n\\n'; const summary = $json.summary; const maxLen = 2000 - header.length - 1; const trimmedSummary = summary.length > maxLen ? summary.slice(0, maxLen) + '…' : summary; return JSON.stringify({ content: header + trimmedSummary }); })() }}",
         "options": {}
       },
       "id": "98e898be-414a-4c1d-8785-c17e7fddbff7",
@@ -275,7 +307,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1520,
+        1712,
         304
       ]
     }
@@ -468,6 +500,18 @@
     },
     "Format News": {
       "main": [
+        [
+          {
+            "node": "IF - Has New Articles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Has New Articles": {
+      "main": [
+        [],
         [
           {
             "node": "Build Request",

@@ -166,7 +166,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\n\n// 投稿済みURLを静的データから取得\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.postedUrls) {\n  staticData.postedUrls = [];\n}\n\n// 古いエントリを削除（7日以上前のものは忘れる）\nconst sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;\nstaticData.postedEntries = (staticData.postedEntries || []).filter(e => e.ts > sevenDaysAgo);\nconst seenUrls = new Set(staticData.postedEntries.map(e => e.url));\n\n// 未投稿の記事をフィルタリング\nconst unseen = items.filter(item => {\n  const link = item.json?.link || '';\n  return link && !seenUrls.has(link);\n});\n\n// 最大20件選択\nconst sample = unseen.slice(0, 20);\n\n// 選択した記事のURLを記録\nconst now = Date.now();\nsample.forEach(item => {\n  const link = item.json?.link || '';\n  if (link) staticData.postedEntries.push({ url: link, ts: now });\n});\n\nconst newsText = sample.map((item, i) => {\n  const title = item.json?.title || 'No title';\n  const link = item.json?.link || 'No link';\n  return `${i+1}. ${title}\\n${link}`;\n}).join('\\n\\n');\n\nreturn [{\n  json: {\n    newsText: newsText,\n    newsCount: sample.length\n  }\n}];"
+        "jsCode": "const items = $input.all();\n\n// 投稿済みURLを静的データから取得\nconst staticData = $getWorkflowStaticData('global');\n\n// 古いエントリを削除（7日以上前のものは忘れる）\nconst sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;\nstaticData.postedEntries = (staticData.postedEntries || []).filter(e => e.ts > sevenDaysAgo);\nconst seenUrls = new Set(staticData.postedEntries.map(e => e.url));\n\n// 未投稿の記事をフィルタリング\nconst unseen = items.filter(item => {\n  const link = item.json?.link || '';\n  return link && !seenUrls.has(link);\n});\n\n// pubDateの降順ソート（新しい記事を優先）\nunseen.sort((a, b) => {\n  const dateA = new Date(a.json?.pubDate || 0).getTime();\n  const dateB = new Date(b.json?.pubDate || 0).getTime();\n  return dateB - dateA;\n});\n\n// 最大20件選択\nconst sample = unseen.slice(0, 20);\n\n// 選択した記事のURLを記録\nconst now = Date.now();\nsample.forEach(item => {\n  const link = item.json?.link || '';\n  if (link) staticData.postedEntries.push({ url: link, ts: now });\n});\n\nconst newsText = sample.map((item, i) => {\n  const title = item.json?.title || 'No title';\n  const link = item.json?.link || 'No link';\n  return `${i+1}. ${title}\\n${link}`;\n}).join('\\n\\n');\n\nreturn [{\n  json: {\n    newsText: newsText,\n    newsCount: sample.length,\n    shouldSkip: sample.length === 0\n  }\n}];"
       },
       "id": "3cdcef27-65b5-49c2-90e1-c374ffcf4009",
       "name": "Format News",
@@ -179,14 +179,46 @@
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first();\nconst newsText = item.json.newsText;\nconst body = JSON.stringify({\n  model: 'claude-haiku-4-5-20251001',\n  max_tokens: 2000,\n  messages: [{ role: 'user', content: `あなたはAIエージェント・LLM分野のニュースキュレーターです。以下のニュース一覧から記事を選んで、必ず10件を紹介してください。\\n\\n優先順位：\\n1. AIエージェント・自律型AI、LLM・基盤モデル、MCP・エージェントフレームワーク、RAG・ベクトルDB、プロンプトエンジニアリング、AI開発ツール・SDK、モデルのベンチマーク・評価\\n2. 上記に関連が薄い場合は、テクノロジー全般・開発者向けの記事で補って構いません\\n\\n必ず10件選んでください。選んだ各記事について以下の形式で日本語で説明してください：\\n\\n【記事タイトル（日本語訳）】\\n内容：（AI開発者にとっての重要性を含め2文以内で簡潔に）\\nURL：（元のURL）\\n\\n---\\n\\nニュース一覧：\\n${newsText}` }]\n});\n\nreturn [{\n  json: {\n    newsText: newsText,\n    newsCount: item.json.newsCount,\n    requestBody: body\n  }\n}];"
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "f1a2b3c4-d5e6-f7a8-b9c0-d1e2f3a4b5c6",
+              "leftValue": "={{ $json.shouldSkip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b1c2d3e4-f5a6-b7c8-d9e0-f1a2b3c4d5e6",
+      "name": "IF - Has New Articles",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        992,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst newsText = item.json.newsText;\nconst body = JSON.stringify({\n  model: 'claude-haiku-4-5-20251001',\n  max_tokens: 2000,\n  messages: [{ role: 'user', content: `あなたはAIエージェント・LLM分野のニュースキュレーターです。以下のニュース一覧から記事を選んで、必ず10件を紹介してください。\\n\\n優先順位：\\n1. AIエージェント・自律型AI、LLM・基盤モデル、MCP・エージェントフレームワーク、RAG・ベクトルDB、プロンプトエンジニアリング、AI開発ツール・SDK、モデルのベンチマーク・評価\\n2. 上記に関連が薄い場合は、テクノロジー全般・開発者向けの記事で補って構いません\\n\\n必ず10件選んでください。選んだ各記事について以下の形式で日本語で説明してください：\\n\\n1. 【記事タイトル（日本語訳）】\\n内容：（AI開発者にとっての重要性を含め2文以内で簡潔に）\\nURL：（元のURL）\\n\\n---\\n\\nニュース一覧：\\n${newsText}` }]\n});\n\nreturn [{\n  json: {\n    newsText: newsText,\n    newsCount: item.json.newsCount,\n    requestBody: body\n  }\n}];"
       },
       "id": "dff94f75-83d3-439f-9c12-d6abadf8630f",
       "name": "Build Request",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        992,
+        1184,
         304
       ]
     },
@@ -218,20 +250,20 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1168,
+        1360,
         304
       ]
     },
     {
       "parameters": {
-        "jsCode": "const response = $input.first().json;\nconst summary = response.content[0].text;\n\nreturn [{\n  json: {\n    summary: summary\n  }\n}];"
+        "jsCode": "const response = $input.first().json;\nconst summary = response.content?.[0]?.text ?? '';\n\nreturn [{\n  json: {\n    summary: summary\n  }\n}];"
       },
       "id": "42376859-07a5-4230-a512-c80293ab90e6",
       "name": "Extract Summary",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1344,
+        1536,
         304
       ]
     },
@@ -242,7 +274,7 @@
         "sendBody": true,
         "contentType": "raw",
         "rawContentType": "application/json",
-        "body": "={{ (() => { const header = '🤖 **AIエージェント・LLMニュース要約** (' + new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) + ')\\n\\n'; const summary = $json.summary; const full = header + summary; const text = full.length > 1900 ? full.slice(0, 1900) + '…' : full; return JSON.stringify({ content: text }); })() }}",
+        "body": "={{ (() => { const header = '🤖 **AIエージェント・LLMニュース要約** (' + new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) + ')\\n\\n'; const summary = $json.summary; const maxLen = 2000 - header.length - 1; const trimmedSummary = summary.length > maxLen ? summary.slice(0, maxLen) + '…' : summary; return JSON.stringify({ content: header + trimmedSummary }); })() }}",
         "options": {}
       },
       "id": "a10bf72f-3398-4a6e-9823-0cd2cca23f1f",
@@ -250,7 +282,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1520,
+        1712,
         304
       ]
     }
@@ -416,6 +448,18 @@
     },
     "Format News": {
       "main": [
+        [
+          {
+            "node": "IF - Has New Articles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Has New Articles": {
+      "main": [
+        [],
         [
           {
             "node": "Build Request",
