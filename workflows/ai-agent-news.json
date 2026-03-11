@@ -166,7 +166,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\nconst jstHour = (new Date().getUTCHours() + 9) % 24;\nconst start = jstHour < 12 ? 0 : 20;\nconst sample = items.slice(start, start + 20);\n\nconst newsText = sample.map((item, i) => {\n  const title = item.json?.title || 'No title';\n  const link = item.json?.link || 'No link';\n  return `${i+1}. ${title}\n${link}`;\n}).join('\\n\\n');\n\nreturn [{\n  json: {\n    newsText: newsText,\n    newsCount: sample.length\n  }\n}];"
+        "jsCode": "const items = $input.all();\n\n// 投稿済みURLを静的データから取得\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.postedUrls) {\n  staticData.postedUrls = [];\n}\n\n// 古いエントリを削除（7日以上前のものは忘れる）\nconst sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;\nstaticData.postedEntries = (staticData.postedEntries || []).filter(e => e.ts > sevenDaysAgo);\nconst seenUrls = new Set(staticData.postedEntries.map(e => e.url));\n\n// 未投稿の記事をフィルタリング\nconst unseen = items.filter(item => {\n  const link = item.json?.link || '';\n  return link && !seenUrls.has(link);\n});\n\n// 最大20件選択\nconst sample = unseen.slice(0, 20);\n\n// 選択した記事のURLを記録\nconst now = Date.now();\nsample.forEach(item => {\n  const link = item.json?.link || '';\n  if (link) staticData.postedEntries.push({ url: link, ts: now });\n});\n\nconst newsText = sample.map((item, i) => {\n  const title = item.json?.title || 'No title';\n  const link = item.json?.link || 'No link';\n  return `${i+1}. ${title}\\n${link}`;\n}).join('\\n\\n');\n\nreturn [{\n  json: {\n    newsText: newsText,\n    newsCount: sample.length\n  }\n}];"
       },
       "id": "3cdcef27-65b5-49c2-90e1-c374ffcf4009",
       "name": "Format News",
